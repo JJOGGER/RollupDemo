@@ -601,8 +601,9 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
 
     @Override
     public void OnAnyChatOnlineUserMessage(int dwUserNum, int dwRoomId) {
-        // TODO Auto-generated method stub
+        //进入房间后触发一次，收到该消息后，可对音视频进行相关操作
         if (isSpeakerMute == true) {
+            //静音
             anychat.UserSpeakControl(dwTargetUserId, 0);
             anychat.UserCameraControl(dwTargetUserId, 1);
         } else {
@@ -613,8 +614,8 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
 
     @Override
     public void OnAnyChatUserAtRoomMessage(int dwUserId, boolean bEnter) {
-        // TODO Auto-generated method stub
         if (isSpeakerMute == true) {
+            //静音
             anychat.UserSpeakControl(dwTargetUserId, 0);
             anychat.UserCameraControl(dwTargetUserId, 1);
         } else {
@@ -686,12 +687,12 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 //静音
                 if (flag) {
                     //开启静音
-                    int i1 = anychat.AudioSetVolume(32621,1);
+                    int i1 = anychat.AudioSetVolume(32621,0);
                     Log.i(TAG, "MIC 开启静音"+i1);
                     flag = false;
                 } else {
                     //关闭静音
-                    int i1 = anychat.AudioSetVolume(32621, 0);
+                    int i1 = anychat.AudioSetVolume(32621, 40);
                     Log.i(TAG, "MIC 关闭静音"+i1);
                     flag = true;
                 }
@@ -704,13 +705,13 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 if (flag) {
                     //开启对讲
                     isMicMute = false;
-                    int i = anychat.UserSpeakControl(-1, 1);
+                    int i = anychat.UserSpeakControl(-1, 0);
                     Log.i(TAG, "MIC 开启对讲"+i);
                     flag = false;
                 } else {
                     //关闭对讲
                     isMicMute = true;
-                    int i = anychat.UserSpeakControl(-1, 0);
+                    int i = anychat.UserSpeakControl(-1, -1);
                     Log.i(TAG, "MIC 关闭对讲"+i);
                     flag = true;
                 }
