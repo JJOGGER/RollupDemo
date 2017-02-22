@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.rollupdemo"
-        minSdkVersion 8
+        minSdkVersion 15
         targetSdkVersion 21
     }
 

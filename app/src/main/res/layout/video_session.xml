@@ -3,13 +3,77 @@
     android:id="@+id/video_session"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center" >
+    android:gravity="center">
 
     <SurfaceView
         android:id="@+id/surface_remote"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         android:keepScreenOn="true" />
+    <LinearLayout
+        android:id="@+id/ll_title_fullscreen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="20dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <!-- android:visibility="gone" -->
+
+        <Button
+            android:id="@+id/btn_shortcut_fullsrceen"
+            android:layout_width="180dp"
+            android:layout_height="45dp"
+            android:layout_marginBottom="10dp"
+            android:padding="5dp"
+            android:text="@string/string_start_record"
+            android:textSize="20sp"
+            android:visibility="visible" />
+
+        <Button
+            android:id="@+id/btn_endvideo_fullscreen"
+            android:layout_width="180dp"
+            android:layout_height="45dp"
+            android:layout_marginBottom="25dip"
+            android:padding="5dp"
+            android:text="@string/exit_video"
+            android:textSize="20sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_exit_fullscreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="退出全屏" />
+
+            <Button
+                android:id="@+id/btn_speak_fullscreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="对讲" />
+
+            <Button
+                android:id="@+id/btn_unlock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="开锁" />
+
+            <Button
+                android:id="@+id/btn_mute"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="静音" />
+        </LinearLayout>
+
+    </LinearLayout>
+
     <ProgressBar
         android:id="@+id/progress_remote"
         style="@android:style/Widget.ProgressBar.Horizontal"
@@ -26,8 +90,8 @@
         android:layout_width="0.1dp"
         android:layout_height="0.1dp"
         android:layout_toRightOf="@+id/progress_remote"
-        android:max="100" 
-        android:visibility="gone"/>
+        android:max="100"
+        android:visibility="gone" />
 
 
 </RelativeLayout>

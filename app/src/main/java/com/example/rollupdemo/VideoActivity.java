@@ -30,6 +30,7 @@ import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -50,11 +51,13 @@ import com.example.anychat.UserItem;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+
 //视频对话界面
 public class VideoActivity extends Activity implements AnyChatBaseEvent,
         OnClickListener, OnTouchListener, AnyChatVideoCallEvent,
         AnyChatUserInfoEvent, AnyChatRecordEvent, AnyChatTransDataEvent {
-
+    private static final String TAG = "VideoActivity";
     private SurfaceView mSurfaceRemote;
     private TextView mTxtTarget;
     private TextView mTxtInfo;
@@ -67,10 +70,13 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
     private Button btn_fullscreen;
     private Button btn_unlock;
     private Button btn_mute;
+    private Button btn_exit_fullscreen;
+    private FrameLayout fl_menu_container;
 
     private int time = 0;
-    private static boolean isMicMute = true;
-    private static boolean isSpeakerMute = false;
+    private static boolean isMicMute = true;//对讲
+    private static boolean isSpeakerMute = false;//静音
+    private static boolean isFullScreen = false;//全屏显示
 
     private AnyChatCoreSDK anychat;
 
@@ -89,8 +95,6 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
     public static final int MSG_TIMEUPDATE = 2;
     public static final int MSG_VISIBLE = 3;
     public static final int MSG_FORCE_FINISH = 4;//防止无网络时，无法退出界面的问题，设置超时退出
-
-    private static final String TAG = "VideoActivity";
     boolean mIsFirst = true;
     float mOriginalLength = 0;
     float mCurrentLength = 0;
@@ -167,16 +171,18 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         Log.i(TAG, "onConfigurationChanged");
-        if (newConfig.orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+        if (newConfig.orientation == SCREEN_ORIENTATION_PORTRAIT) {
+            //竖屏
             int screenHeight = getWindowManager().getDefaultDisplay()
                     .getHeight();
             adjuestVideoNormalSize(screenHeight, screenHeight * 3 / 5);
+            fl_menu_container.setVisibility(View.GONE);
             isHideTimeUse = false;
         } else {
-            int screenWidth = getWindowManager().getDefaultDisplay().getWidth();
-            int screenHeight = getWindowManager().getDefaultDisplay()
-                    .getHeight();
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getResources().getDisplayMetrics().heightPixels;
             adjuestVideoNormalSize(screenWidth, screenHeight);
+            //fl_menu_container.setVisibility(View.VISIBLE);
             isHideTimeUse = true;
         }
         super.onConfigurationChanged(newConfig);
@@ -378,13 +384,15 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
         mTxtInfo = (TextView) findViewById(R.id.textview_video_2);
 //		mBtnEndSession = (Button) findViewById(R.id.btn_endsession);
         btn_endvideo = (Button) findViewById(R.id.btn_endvideo);
+        btn_exit_fullscreen= (Button) findViewById(R.id.btn_exit_fullscreen);
         btn_endvideo.setOnClickListener(this);
 //		mBtnEndSession.setOnClickListener(this);
 
-        btn_fullscreen= (Button) findViewById(R.id.btn_fullscreen);
-        btn_mute= (Button) findViewById(R.id.btn_mute);
-        btn_speak= (Button) findViewById(R.id.btn_speak);
-        btn_unlock= (Button) findViewById(R.id.btn_unlock);
+        btn_fullscreen = (Button) findViewById(R.id.btn_fullscreen);
+        btn_mute = (Button) findViewById(R.id.btn_mute);
+        btn_speak = (Button) findViewById(R.id.btn_speak);
+        btn_unlock = (Button) findViewById(R.id.btn_unlock);
+        //fl_menu_container = (FrameLayout) findViewById(R.id.fl_menu_container);
         btn_fullscreen.setOnClickListener(this);
         btn_mute.setOnClickListener(this);
         btn_speak.setOnClickListener(this);
@@ -465,8 +473,8 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
      * @param height
      */
     public void adjuestVideoNormalSize(int width, int height) {
-        int dwRemoteVideoHeight = 0;
-        int dwRemoteVideoWidth = 0;
+        int dwRemoteVideoHeight;
+        int dwRemoteVideoWidth;
         if (3.0 * width > 4 * height) {
             dwRemoteVideoHeight = height;
             dwRemoteVideoWidth = (int) (4.0 / 3.0 * dwRemoteVideoHeight);
@@ -479,7 +487,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
         // 视频区域参数
         layoutVideoArea.width = width;
         layoutVideoArea.height = height;
-        layoutVideoArea.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,
+        layoutVideoArea.addRule(RelativeLayout.CENTER_IN_PARENT,
                 RelativeLayout.TRUE);
         view.setLayoutParams(layoutVideoArea);
         // 设置远程视频位置
@@ -488,6 +496,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
         layoutParamOther.width = dwRemoteVideoWidth;
         layoutParamOther.height = dwRemoteVideoHeight;
         mSurfaceRemote.setLayoutParams(layoutParamOther);
+
     }
 
     public void adjustVideoFullScreen() {
@@ -506,6 +515,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 .getLayoutParams();
         layoutParamOther.width = width;
         layoutParamOther.height = height;
+        Log.i(TAG, "---width：" + width + "--height:" + height);
         mSurfaceRemote.setLayoutParams(layoutParamOther);
     }
 
@@ -520,7 +530,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 Log.d(TAG, "没有找到摄像头");
             } else if (camerastate == 2 && videowidth != 0) {
                 /*
-				 * camerastate == 2 摄像头打开 videowidth == 0 打开视频设备失败
+                 * camerastate == 2 摄像头打开 videowidth == 0 打开视频设备失败
 				 */
                 SurfaceHolder holder = mSurfaceRemote.getHolder();
                 // 如果是采用内核视频显示（非Java驱动），则需要设置Surface的参数
@@ -602,6 +612,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
     @Override
     public void OnAnyChatOnlineUserMessage(int dwUserNum, int dwRoomId) {
         //进入房间后触发一次，收到该消息后，可对音视频进行相关操作
+        Log.i(TAG, "--->dwTargetUserId:" + dwTargetUserId + "--isSpeakerMute:" + isSpeakerMute);
         if (isSpeakerMute == true) {
             //静音
             anychat.UserSpeakControl(dwTargetUserId, 0);
@@ -615,11 +626,12 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
     @Override
     public void OnAnyChatUserAtRoomMessage(int dwUserId, boolean bEnter) {
         if (isSpeakerMute == true) {
-            //静音
+            //没开对讲
             anychat.UserSpeakControl(dwTargetUserId, 0);
             anychat.UserCameraControl(dwTargetUserId, 1);
         } else {
             speakCameraControl(dwTargetUserId, 1);
+            //anychat.UserSpeakControl(dwTargetUserId, 40);//9：07
         }
 
         bOtherVideoOpened = false;
@@ -627,7 +639,6 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
 
     @Override
     public void OnAnyChatLinkCloseMessage(int dwErrorCode) {
-        // TODO Auto-generated method stub
         if (dwErrorCode == 0) {
             finish();
         }
@@ -635,7 +646,6 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
 
     private AlphaAnimation alphaAnimation1 = null;
     private boolean isRecord = false;
-    boolean flag = false;
 
     @Override
     public void onClick(View v) {
@@ -649,52 +659,39 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 break;
 
             case R.id.btn_shortcut:
-                if (!isRecord) {
-                    shortcutBtn.setText(R.string.string_end_record);
-                    AnyChatCoreSDK.SetSDKOptionInt(AnyChatDefine.BRAC_SO_RECORD_FILETYPE, 0);
-                    if (Utils.getSDCardPath() != null) {
-                        anychat.SetSDKOptionString(AnyChatDefine.BRAC_SO_RECORD_TMPDIR, Utils.getSDCardPath() + Environment.DIRECTORY_DCIM);
-                    }
-                    int dwFlags = AnyChatDefine.ANYCHAT_RECORD_FLAGS_VIDEO + AnyChatDefine.ANYCHAT_RECORD_FLAGS_AUDIO;
-                    anychat.StreamRecordCtrlEx(dwTargetUserId, 1, dwFlags, 0, "");
-                    mTxtInfo.setText(getString(R.string.string_recording));
-                    isRecord = true;
-                    recordLogo.setVisibility(View.VISIBLE);
-                    if (alphaAnimation1 == null) {
-                        alphaAnimation1 = new AlphaAnimation(0.1f, 1.0f);
-                        alphaAnimation1.setDuration(500);
-                        alphaAnimation1.setRepeatCount(Animation.INFINITE);
-                        alphaAnimation1.setRepeatMode(Animation.REVERSE);
-                    }
-                    recordLogo.setAnimation(alphaAnimation1);
-                    alphaAnimation1.start();
-                } else {
-                    shortcutBtn.setText(R.string.string_start_record);
-//				int dwFlags = AnyChatDefine.ANYCHAT_RECORD_FLAGS_VIDEO + AnyChatDefine.ANYCHAT_RECORD_FLAGS_AUDIO;
-                    anychat.StreamRecordCtrlEx(dwTargetUserId, 0, 0, 0, "");
-                    mTxtInfo.setText(getString(R.string.string_videoing));
-                    isRecord = false;
-                    alphaAnimation1.cancel();
-                    recordLogo.clearAnimation();
-                    recordLogo.setVisibility(View.GONE);
-                }
+                //录像
+                recordMethod();
                 break;
             case R.id.btn_fullscreen:
                 //全屏
-                adjustVideoFullScreen();
+                if (isFullScreen) {
+                    isFullScreen = false;
+                    ll_title.setVisibility(View.VISIBLE);
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                    btn_exit_fullscreen.setVisibility(View.GONE);
+                    //view.animate().rotation(90).setDuration(1000).start();
+                    // mSurfaceRemote.animate().rotation(90).setDuration(1000).start();
+                } else {
+                    isFullScreen = true;
+                    btn_exit_fullscreen.setVisibility(View.VISIBLE);
+                    ll_title.setVisibility(View.GONE);
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                    //view.animate().rotation(0).setDuration(1000).start();
+                    //mSurfaceRemote.animate().rotation(0).setDuration(1000).start();
+                }
                 break;
             case R.id.btn_mute:
                 //静音
-                if (flag) {
+                if (!isSpeakerMute) {
                     //开启静音
-                    int i1 = anychat.AudioSetVolume(32621,0);
-                    Log.i(TAG, "MIC 开启静音"+i1);
-                    flag = false;
+                    anychat.AudioSetVolume(-1, 0);
+                    Log.i(TAG, "MIC 开启静音");
+                    isSpeakerMute = true;
                 } else {
                     //关闭静音
-                    int i1 = anychat.AudioSetVolume(32621, 40);
-                    Log.i(TAG, "MIC 关闭静音"+i1);
-                    flag = true;
+                    anychat.AudioSetVolume(-1, 40);
+                    Log.i(TAG, "MIC 关闭静音");
+                    isSpeakerMute = false;
                 }
                 break;
             case R.id.btn_unlock:
@@ -702,20 +699,50 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                 break;
             case R.id.btn_speak:
                 //对讲
-                if (flag) {
+                if (isMicMute) {
                     //开启对讲
                     isMicMute = false;
-                    int i = anychat.UserSpeakControl(-1, 0);
-                    Log.i(TAG, "MIC 开启对讲"+i);
-                    flag = false;
+                    anychat.UserSpeakControl(-1, 50);
+                    Log.i(TAG, "MIC 开启对讲");
                 } else {
                     //关闭对讲
                     isMicMute = true;
-                    int i = anychat.UserSpeakControl(-1, -1);
-                    Log.i(TAG, "MIC 关闭对讲"+i);
-                    flag = true;
+                    anychat.UserSpeakControl(-1, 0);
+                    Log.i(TAG, "MIC 关闭对讲");
                 }
                 break;
+        }
+    }
+
+    private void recordMethod() {
+        if (!isRecord) {
+            shortcutBtn.setText(R.string.string_end_record);
+            AnyChatCoreSDK.SetSDKOptionInt(AnyChatDefine.BRAC_SO_RECORD_FILETYPE, 0);
+            if (Utils.getSDCardPath() != null) {
+                anychat.SetSDKOptionString(AnyChatDefine.BRAC_SO_RECORD_TMPDIR, Utils.getSDCardPath() + Environment.DIRECTORY_DCIM);
+            }
+            int dwFlags = AnyChatDefine.ANYCHAT_RECORD_FLAGS_VIDEO + AnyChatDefine.ANYCHAT_RECORD_FLAGS_AUDIO;
+            anychat.StreamRecordCtrlEx(dwTargetUserId, 1, dwFlags, 0, "");
+            mTxtInfo.setText(getString(R.string.string_recording));
+            isRecord = true;
+            recordLogo.setVisibility(View.VISIBLE);
+            if (alphaAnimation1 == null) {
+                alphaAnimation1 = new AlphaAnimation(0.1f, 1.0f);
+                alphaAnimation1.setDuration(500);
+                alphaAnimation1.setRepeatCount(Animation.INFINITE);
+                alphaAnimation1.setRepeatMode(Animation.REVERSE);
+            }
+            recordLogo.setAnimation(alphaAnimation1);
+            alphaAnimation1.start();
+        } else {
+            shortcutBtn.setText(R.string.string_start_record);
+//				int dwFlags = AnyChatDefine.ANYCHAT_RECORD_FLAGS_VIDEO + AnyChatDefine.ANYCHAT_RECORD_FLAGS_AUDIO;
+            anychat.StreamRecordCtrlEx(dwTargetUserId, 0, 0, 0, "");
+            mTxtInfo.setText(getString(R.string.string_videoing));
+            isRecord = false;
+            alphaAnimation1.cancel();
+            recordLogo.clearAnimation();
+            recordLogo.setVisibility(View.GONE);
         }
     }
 
@@ -815,7 +842,12 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
 
             case MotionEvent.ACTION_UP://终止触摸时刻
                 Log.i(TAG, "离开屏幕");
-                showTitle();
+//                showTitle();
+//                if (isFullScreen)
+//                    btn_exit_fullscreen.setVisibility(View.VISIBLE);
+//                else {
+//                    btn_exit_fullscreen.setVisibility(View.GONE);
+//                }
                 break;
         }
         return super.onTouchEvent(event);
@@ -878,6 +910,7 @@ public class VideoActivity extends Activity implements AnyChatBaseEvent,
                                    String TempFilePath, int dwFileLength, int wParam, int lParam,
                                    int dwTaskId) {
         // TODO Auto-generated method stub
+        //保存图像
 
     }
 
